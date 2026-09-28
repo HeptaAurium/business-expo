@@ -1,10 +1,47 @@
-// Prisma schema — data models added once the booth layout is finalized.
-
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+}
+
+enum BoothType {
+  STANDARD
+  CORPORATE
+}
+
+enum BoothStatus {
+  AVAILABLE
+  HELD
+  BOOKED
+}
+
+/// An area of the expo ground with its own floor map (e.g. Premium Ground, Arena).
+model Location {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  booths    Booth[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Booth {
+  id         String      @id @default(cuid())
+  code       String      @unique
+  type       BoothType   @default(STANDARD)
+  status     BoothStatus @default(AVAILABLE)
+  /// Expiry of a HELD booth; once past, the hold lapses and the booth is available again.
+  heldUntil  DateTime?
+  /// Sequential order within the location until real x/y coordinates are mapped.
+  position   Int
+  location   Location    @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  locationId String
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@unique([locationId, position])
+  @@index([status, heldUntil])
 }
