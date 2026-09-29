@@ -1,60 +1,71 @@
-import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
-import { BoothType, PrismaClient } from "../generated/prisma/client";
+import { PrismaClient, BoothType } from "@/generated/prisma/client";
 
-const prisma = new PrismaClient({
-  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
-});
-
-type BoothSeed = { code: string; type: BoothType };
-
-const standard = (prefix: string, count: number): BoothSeed[] =>
-  Array.from({ length: count }, (_, i) => ({
-    code: `${prefix}${i + 1}`,
-    type: BoothType.STANDARD,
-  }));
-
-const locations: { slug: string; name: string; booths: BoothSeed[] }[] = [
-  {
-    slug: "premium-ground",
-    name: "Premium Ground",
-    booths: [
-      { code: "P1", type: BoothType.CORPORATE },
-      { code: "P2", type: BoothType.CORPORATE },
-      ...standard("A", 8),
-    ],
-  },
-  {
-    slug: "arena",
-    name: "Arena",
-    booths: standard("B", 8),
-  },
-];
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  for (const loc of locations) {
-    const location = await prisma.location.upsert({
-      where: { slug: loc.slug },
-      update: { name: loc.name },
-      create: { slug: loc.slug, name: loc.name },
+  const arena = await prisma.location.upsert({
+    where: { slug: "arena" },
+    update: {},
+    create: { slug: "arena", name: "Arena" },
+  });
+
+  const premium = await prisma.location.upsert({
+    where: { slug: "premium" },
+    update: {},
+    create: { slug: "premium", name: "Premium Ground" },
+  });
+
+  // Arena: single column, B1–B8, standard booths.
+  // `code` is globally unique (not just per-location), so it's the upsert key.
+  for (let i = 1; i <= 8; i++) {
+    await prisma.booth.upsert({
+      where: { code: `B${i}` },
+      update: {},
+      create: {
+        code: `B${i}`,
+        type: BoothType.STANDARD,
+        position: i,
+        locationId: arena.id,
+      },
     });
+  }
 
-    // Upsert by code so re-seeding never resets the status of live bookings.
-    for (const [position, booth] of loc.booths.entries()) {
-      await prisma.booth.upsert({
-        where: { code: booth.code },
-        update: { type: booth.type, position, locationId: location.id },
-        create: { ...booth, position, locationId: location.id },
-      });
-    }
+  // Premium: P1–P2 corporate booths, A1–A8 standard booths.
+  for (let i = 1; i <= 2; i++) {
+    await prisma.booth.upsert({
+      where: { code: `P${i}` },
+      update: {},
+      create: {
+        code: `P${i}`,
+        type: BoothType.CORPORATE,
+        position: i,
+        locationId: premium.id,
+      },
+    });
+  }
 
-    console.log(`Seeded ${loc.name}: ${loc.booths.length} booths`);
+  for (let i = 1; i <= 8; i++) {
+    await prisma.booth.upsert({
+      where: { code: `A${i}` },
+      update: {},
+      create: {
+        code: `A${i}`,
+        type: BoothType.STANDARD,
+        position: i + 2, // after P1, P2 in layout order
+        locationId: premium.id,
+      },
+    });
   }
 }
 
 main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
+  .then(async () => {
+    await prisma.$disconnect();
   })
-  .finally(() => prisma.$disconnect());
+  .catch(async (e) => {
+    console.error(e);
+    await prisma.$disconnect();
+    process.exit(1);
+  });

@@ -4,14 +4,11 @@ WORKDIR /app
 
 RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
-# Prisma schema + config are needed by the postinstall `prisma generate`.
-COPY package.json package-lock.json* prisma.config.ts ./
-COPY prisma ./prisma
-RUN npm config set fetch-retries 5 \
-    && npm config set fetch-retry-mintimeout 20000 \
-    && npm ci
+RUN chown -R node:node /app
+USER node
 
-COPY . .
+COPY --chown=node:node . .
+RUN npm install
 
 EXPOSE 3000
 

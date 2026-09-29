@@ -1,69 +1,277 @@
 import Image from "next/image";
+import Link from "next/link";
+
+type Package = {
+  name: string;
+  price: string;
+  accent: "corporate" | "primary" | "accent";
+  features: string[];
+};
+
+const packages: Package[] = [
+  {
+    name: "Sponsorship Package",
+    price: "KSh 15,000",
+    accent: "corporate",
+    features: [
+      "Brand features on all official socials",
+      "Brand logo placement on event posters",
+      "Strategic premium location for exhibition",
+      "3 × 3 exhibition tent",
+      "2 fully dressed tables & chairs",
+    ],
+  },
+  {
+    name: "Corporates & Institutions",
+    price: "KSh 10,000",
+    accent: "primary",
+    features: [
+      "Premium exhibition position",
+      "3 × 3 exhibition tent",
+      "2 fully dressed tables & 2 dressed chairs",
+    ],
+  },
+  {
+    name: "SMEs Package",
+    price: "KSh 5,000",
+    accent: "primary",
+    features: [
+      "Standard exhibition position",
+      "3 × 3 shared exhibition tent",
+      "1 fully dressed table & 2 dressed chairs",
+    ],
+  },
+  {
+    name: "Registered Youth",
+    price: "KSh 3,000",
+    accent: "accent",
+    features: ["Shared tent space", "1 dressed table & 1 chair"],
+  },
+];
+
+const accentVar: Record<Package["accent"], string> = {
+  corporate: "var(--brand-corporate)",
+  primary: "var(--brand-primary)",
+  accent: "var(--brand-accent)",
+};
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
+    <main className="flex flex-col">
+      {/* Hero */}
+      <section
+        className="border-b"
+        style={{
+          borderColor:
+            "color-mix(in srgb, var(--brand-primary) 15%, transparent)",
+          background:
+            "linear-gradient(180deg, color-mix(in srgb, var(--brand-primary) 6%, transparent), transparent)",
+        }}
+      >
+        <div className="mx-auto flex max-w-5xl flex-col items-center gap-6 px-6 py-16 text-center">
+          <Image
+            src="/expo-logo.png"
+            alt="St. Joseph Mukasa Business Expo 2026 logo"
+            width={112}
+            height={112}
+            className="rounded-xl"
+            priority
+          />
+
+          <span
+            className="text-xs font-semibold uppercase tracking-wide"
+            style={{ color: "var(--brand-muted)" }}
+          >
+            St. Joseph Mukasa C.C. Kahawa West — Self Help Group &amp; Young
+            Catholic Adults, in partnership with Caritas Nairobi
+          </span>
+
+          <h1
+            className="text-4xl font-bold sm:text-5xl"
+            style={{ color: "var(--brand-primary)" }}
+          >
+            St. Joseph Mukasa Business Expo 2026
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+
+          <p
+            className="max-w-2xl text-base sm:text-lg"
+            style={{ color: "var(--foreground)" }}
+          >
+            A one-day marketplace bringing together SMEs, corporates,
+            institutions and youth entrepreneurs from Kahawa West and beyond —
+            showcase what you do, meet new customers, and grow your business.
+          </p>
+
+          <div
+            className="flex flex-col items-center gap-1 text-sm sm:flex-row sm:gap-6"
+            style={{ color: "var(--brand-muted)" }}
+          >
+            <span className="font-semibold">
+              📅 Sunday, 29 November 2026 · 7:00 AM onwards
+            </span>
+            <span className="hidden sm:inline">·</span>
+            <span>
+              📍 St. Joseph Mukasa Catholic Church, Kahawa West — along Church
+              Road, off Market Road
+            </span>
+          </div>
+
+          <span
+            className="rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wide"
+            style={{
+              backgroundColor: "var(--brand-corporate)",
+              color: "var(--brand-corporate-foreground)",
+            }}
+          >
+            Limited slots left — book yours today
+          </span>
+
+          <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+            <Link
+              href="/booths"
+              className="rounded-md px-6 py-3 text-sm font-semibold transition-opacity hover:opacity-90"
+              style={{
+                backgroundColor: "var(--brand-primary)",
+                color: "var(--brand-primary-foreground)",
+              }}
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              Reserve Your Booth →
+            </Link>
+            <Link
+              href="#packages"
+              className="rounded-md border px-6 py-3 text-sm font-semibold transition-opacity hover:opacity-70"
+              style={{
+                borderColor: "var(--brand-primary)",
+                color: "var(--brand-primary)",
+              }}
             >
-              Learning
-            </a>{" "}
-            center.
+              View Packages
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Packages */}
+      <section
+        id="packages"
+        className="mx-auto w-full max-w-5xl scroll-mt-20 px-6 py-16"
+      >
+        <div className="mx-auto max-w-2xl text-center">
+          <h2
+            className="text-2xl font-bold sm:text-3xl"
+            style={{ color: "var(--brand-primary)" }}
+          >
+            Exhibition Packages
+          </h2>
+          <p
+            className="mt-2 text-sm sm:text-base"
+            style={{ color: "var(--brand-muted)" }}
+          >
+            Pick the package that fits your business, then head to the booth map
+            to choose and reserve your exact spot.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <div className="mt-10 grid gap-5 sm:grid-cols-2">
+          {packages.map((pkg) => (
+            <div
+              key={pkg.name}
+              className="flex flex-col gap-4 rounded-lg border-t-4 bg-white/60 p-6 shadow-sm dark:bg-white/5"
+              style={{
+                borderTopColor: accentVar[pkg.accent],
+                borderLeft:
+                  "1px solid color-mix(in srgb, var(--brand-primary) 12%, transparent)",
+                borderRight:
+                  "1px solid color-mix(in srgb, var(--brand-primary) 12%, transparent)",
+                borderBottom:
+                  "1px solid color-mix(in srgb, var(--brand-primary) 12%, transparent)",
+              }}
+            >
+              <div className="flex items-baseline justify-between gap-2">
+                <h3
+                  className="text-lg font-bold"
+                  style={{ color: "var(--foreground)" }}
+                >
+                  {pkg.name}
+                </h3>
+                <span
+                  className="whitespace-nowrap text-lg font-extrabold"
+                  style={{ color: accentVar[pkg.accent] }}
+                >
+                  {pkg.price}
+                </span>
+              </div>
+
+              <ul
+                className="flex flex-1 flex-col gap-1.5 text-sm"
+                style={{ color: "var(--brand-muted)" }}
+              >
+                {pkg.features.map((feature) => (
+                  <li key={feature} className="flex gap-2">
+                    <span style={{ color: accentVar[pkg.accent] }}>✓</span>
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <Link
+                href="/booths"
+                className="mt-2 rounded-md px-4 py-2 text-center text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                style={{ backgroundColor: accentVar[pkg.accent] }}
+              >
+                Book This Package
+              </Link>
+            </div>
+          ))}
         </div>
-      </main>
-    </div>
+      </section>
+
+      {/* Final CTA */}
+      <section
+        className="border-t"
+        style={{
+          borderColor:
+            "color-mix(in srgb, var(--brand-primary) 15%, transparent)",
+        }}
+      >
+        <div className="mx-auto flex max-w-5xl flex-col items-center gap-4 px-6 py-12 text-center">
+          <h2
+            className="text-xl font-bold sm:text-2xl"
+            style={{ color: "var(--brand-primary)" }}
+          >
+            Ready to claim your spot?
+          </h2>
+          <p
+            className="max-w-xl text-sm"
+            style={{ color: "var(--brand-muted)" }}
+          >
+            Browse the live floor map for Arena and Premium Ground, and reserve
+            an available booth in a few clicks.
+          </p>
+          <Link
+            href="/booths"
+            className="rounded-md px-6 py-3 text-sm font-semibold transition-opacity hover:opacity-90"
+            style={{
+              backgroundColor: "var(--brand-primary)",
+              color: "var(--brand-primary-foreground)",
+            }}
+          >
+            Reserve Your Booth →
+          </Link>
+        </div>
+      </section>
+
+      <footer
+        className="border-t px-6 py-6 text-center text-xs"
+        style={{
+          borderColor:
+            "color-mix(in srgb, var(--brand-primary) 15%, transparent)",
+          color: "var(--brand-muted)",
+        }}
+      >
+        St. Joseph Mukasa C.C. Kahawa West (S.H.G.) · Young Catholic Adults ·
+        Caritas Nairobi
+      </footer>
+    </main>
   );
 }

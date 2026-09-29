@@ -1,14 +1,19 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 
-// Reuse one client across hot reloads in dev so we don't exhaust connections.
-const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
+// The new "prisma-client" generator doesn't read DATABASE_URL from the
+// schema on its own — it needs a driver adapter constructed with it
+// explicitly.
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 
-function createClient() {
-  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
-  return new PrismaClient({ adapter });
+// Standard Next.js dev-mode singleton: without this, hot reload creates a
+// fresh PrismaClient (and a fresh connection pool) on every file change.
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
+
+export const prisma = globalForPrisma.prisma ?? new PrismaClient({ adapter });
+
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.prisma = prisma;
 }
-
-export const prisma = globalForPrisma.prisma ?? createClient();
-
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
