@@ -53,9 +53,12 @@ function BoothButton({
     <button
       type="button"
       disabled={!isPickable}
-      onClick={() => onSelect(booth)}
-      className={boothClassName(booth.type, booth.status, isSelected)}
-      style={{ width: booth.type === "CORPORATE" ? 96 : 72, height: 56 }}
+      onClick={() => {
+        console.log("Booth clicked", booth);
+        onSelect(booth);
+      }}
+      className={`${boothClassName(booth.type, booth.status, isSelected)} text-[11px]`}
+      style={{ width: booth.type === "CORPORATE" ? 52 : 40, height: 40 }}
       aria-pressed={isSelected}
       title={`${booth.code} — ${booth.status.toLowerCase()}`}
     >
@@ -64,21 +67,90 @@ function BoothButton({
   );
 }
 
-// Small pill used to label a zone of the floor plan (a wall, a path, an
-// entrance) that isn't itself a bookable booth.
-function ZoneLabel({ children }: { children: string }) {
+type BoothRow = {
+  label?: string;
+  booths: MapBooth[];
+};
+
+/**
+ * Theatre/cinema-style seat map: a curved "screen" bar labels the front of
+ * the floor, booths sit in centered rows below it (grouped by type), and a
+ * legend runs along the bottom — matching the seat-map look the organizer
+ * wanted, rather than a literal trace of the hand-drawn sketch.
+ */
+function TheatreFloorPlan({
+  frontLabel,
+  rows,
+  selectedId,
+  onSelect,
+}: {
+  frontLabel: string;
+  rows: BoothRow[];
+  selectedId: string | null;
+  onSelect: (booth: MapBooth) => void;
+}) {
   return (
-    <span
-      className="inline-flex w-fit items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide"
+    <div
+      className="flex flex-col items-center gap-6 rounded-lg border-2 border-dashed px-6 py-8"
       style={{
-        backgroundColor:
-          "color-mix(in srgb, var(--brand-muted) 12%, transparent)",
-        color: "var(--brand-muted)",
+        borderColor:
+          "color-mix(in srgb, var(--brand-primary) 25%, transparent)",
       }}
     >
-      {children}
-    </span>
+      <div className="flex flex-col items-center gap-2">
+        <div
+          className="h-3 w-56 max-w-full opacity-70 sm:w-72"
+          style={{
+            backgroundColor: "var(--brand-primary)",
+            borderBottomLeftRadius: "999px",
+            borderBottomRightRadius: "999px",
+          }}
+        />
+        <span
+          className="text-[10px] font-semibold uppercase tracking-[0.2em]"
+          style={{ color: "var(--brand-muted)" }}
+        >
+          {frontLabel}
+        </span>
+      </div>
+
+      <div className="flex flex-col items-center gap-4">
+        {rows.map((row, index) => (
+          <div key={row.label ?? index} className="flex items-center gap-3">
+            {row.label && (
+              <span
+                className="w-16 shrink-0 text-right text-[10px] font-semibold uppercase tracking-wide"
+                style={{ color: "var(--brand-muted)" }}
+              >
+                {row.label}
+              </span>
+            )}
+            <div className="flex flex-wrap justify-center gap-2">
+              {row.booths.map((booth) => (
+                <BoothButton
+                  key={booth.id}
+                  booth={booth}
+                  isSelected={selectedId === booth.id}
+                  onSelect={onSelect}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
+}
+
+function byPosition(a: MapBooth, b: MapBooth) {
+  return a.position - b.position;
+}
+
+function groupByType(booths: MapBooth[]) {
+  return {
+    corporate: booths.filter((b) => b.type === "CORPORATE").sort(byPosition),
+    standard: booths.filter((b) => b.type === "STANDARD").sort(byPosition),
+  };
 }
 
 type LayoutProps = {
@@ -87,81 +159,39 @@ type LayoutProps = {
   onSelect: (booth: MapBooth) => void;
 };
 
-const floorPlanBorder = {
-  borderColor: "color-mix(in srgb, var(--brand-primary) 25%, transparent)",
-};
-
-/**
- * Arena — a single row of standard booths (B1–B8) along the hall's left
- * wall, with open floor to the right and a path wrapping past both the top
- * and bottom entrances. Matches the organizer's hand-drawn layout: B8 sits
- * slightly apart from the B1–B7 run, closer to the bottom path.
- */
+/** Arena — a single run of standard booths (B1–B8) facing the entrance. */
 function ArenaFloorPlan({ booths, selectedId, onSelect }: LayoutProps) {
-  const sorted = [...booths].sort((a, b) => a.position - b.position);
-  const lastBooth = sorted[sorted.length - 1];
-  const mainRun = sorted.slice(0, -1);
-
+  const sorted = [...booths].sort(byPosition);
   return (
-    <div
-      className="relative rounded-lg border-2 border-dashed px-5 py-10"
-      style={floorPlanBorder}
-    >
-      <div className="absolute right-4 top-3">
-        <ZoneLabel>Path</ZoneLabel>
-      </div>
-      <div className="absolute right-4 bottom-3">
-        <ZoneLabel>Path</ZoneLabel>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        {mainRun.map((booth) => (
-          <BoothButton
-            key={booth.id}
-            booth={booth}
-            isSelected={selectedId === booth.id}
-            onSelect={onSelect}
-          />
-        ))}
-        {lastBooth && (
-          <div className="mt-3">
-            <BoothButton
-              booth={lastBooth}
-              isSelected={selectedId === lastBooth.id}
-              onSelect={onSelect}
-            />
-          </div>
-        )}
-      </div>
-    </div>
+    <TheatreFloorPlan
+      frontLabel="Entrance / Path"
+      rows={[{ booths: sorted }]}
+      selectedId={selectedId}
+      onSelect={onSelect}
+    />
   );
 }
 
 /**
- * Premium Ground — corporate booths (P1–P2) run along the church wall at
- * the top, a path runs down the right side, and standard booths (A1–A8)
- * line up along the bottom next to the gate. Matches the organizer's
- * hand-drawn layout.
+ * Premium Ground — traces the actual sketch rather than the generic theatre
+ * rows: the church wall runs along the right edge, P2 sits in the top-right
+ * corner against it, P1 sits just to P2's left, and the standard A booths
+ * fill the left side of the ground.
  */
 function PremiumFloorPlan({ booths, selectedId, onSelect }: LayoutProps) {
-  const corporate = booths
-    .filter((b) => b.type === "CORPORATE")
-    .sort((a, b) => a.position - b.position);
-  const standard = booths
-    .filter((b) => b.type === "STANDARD")
-    .sort((a, b) => a.position - b.position);
+  const { corporate, standard } = groupByType(booths);
 
   return (
     <div
-      className="rounded-lg border-2 border-dashed p-5"
-      style={floorPlanBorder}
+      className="flex overflow-hidden rounded-lg border-2 border-dashed"
+      style={{
+        borderColor:
+          "color-mix(in srgb, var(--brand-primary) 25%, transparent)",
+      }}
     >
-      <div className="flex justify-center pb-5">
-        <ZoneLabel>Church wall</ZoneLabel>
-      </div>
-
-      <div className="flex items-start justify-between gap-6">
-        <div className="flex flex-col gap-6">
+      <div className="flex flex-1 flex-col gap-6 px-6 py-8">
+        {/* P1, P2 — anchored top-right, against the church wall */}
+        <div className="flex justify-end gap-2">
           {corporate.map((booth) => (
             <BoothButton
               key={booth.id}
@@ -172,57 +202,8 @@ function PremiumFloorPlan({ booths, selectedId, onSelect }: LayoutProps) {
           ))}
         </div>
 
-        <div className="self-stretch pt-1">
-          <ZoneLabel>Path</ZoneLabel>
-        </div>
-      </div>
-
-      <div
-        className="mt-8 flex flex-wrap items-center gap-3 border-t pt-4"
-        style={{
-          borderColor:
-            "color-mix(in srgb, var(--brand-primary) 15%, transparent)",
-        }}
-      >
-        <ZoneLabel>Gate</ZoneLabel>
-        {standard.map((booth) => (
-          <BoothButton
-            key={booth.id}
-            booth={booth}
-            isSelected={selectedId === booth.id}
-            onSelect={onSelect}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/** Fallback for a location whose floor layout hasn't been sketched yet. */
-function GenericFloorPlan({ booths, selectedId, onSelect }: LayoutProps) {
-  const corporate = booths
-    .filter((b) => b.type === "CORPORATE")
-    .sort((a, b) => a.position - b.position);
-  const standard = booths
-    .filter((b) => b.type === "STANDARD")
-    .sort((a, b) => a.position - b.position);
-
-  return (
-    <div className="flex flex-col gap-4">
-      {corporate.length > 0 && (
-        <div className="flex flex-wrap gap-3">
-          {corporate.map((booth) => (
-            <BoothButton
-              key={booth.id}
-              booth={booth}
-              isSelected={selectedId === booth.id}
-              onSelect={onSelect}
-            />
-          ))}
-        </div>
-      )}
-      {standard.length > 0 && (
-        <div className="flex flex-wrap gap-3">
+        {/* A1–A8 — fill the left side of the ground */}
+        <div className="flex flex-wrap content-start gap-2">
           {standard.map((booth) => (
             <BoothButton
               key={booth.id}
@@ -232,8 +213,42 @@ function GenericFloorPlan({ booths, selectedId, onSelect }: LayoutProps) {
             />
           ))}
         </div>
-      )}
+      </div>
+
+      {/* Church wall, running the full height along the right edge */}
+      <div
+        className="flex w-8 shrink-0 items-center justify-center"
+        style={{
+          backgroundColor:
+            "color-mix(in srgb, var(--brand-primary) 12%, transparent)",
+        }}
+      >
+        <span
+          className="text-[10px] font-semibold uppercase tracking-[0.2em]"
+          style={{ writingMode: "vertical-rl", color: "var(--brand-muted)" }}
+        >
+          Church Wall
+        </span>
+      </div>
     </div>
+  );
+}
+
+/** Fallback for a location whose floor layout hasn't been sketched yet. */
+function GenericFloorPlan({ booths, selectedId, onSelect }: LayoutProps) {
+  const { corporate, standard } = groupByType(booths);
+  const rows: BoothRow[] = [];
+  if (corporate.length > 0)
+    rows.push({ label: "Corporate", booths: corporate });
+  if (standard.length > 0) rows.push({ label: "Standard", booths: standard });
+
+  return (
+    <TheatreFloorPlan
+      frontLabel="Entrance"
+      rows={rows}
+      selectedId={selectedId}
+      onSelect={onSelect}
+    />
   );
 }
 
@@ -394,24 +409,13 @@ export default function BoothMap({
   };
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h2
-          className="text-lg font-semibold"
-          style={{ color: "var(--brand-primary)" }}
-        >
-          {locationName}
-        </h2>
-        <div
-          className="mt-1 flex gap-4 text-xs"
-          style={{ color: "var(--brand-muted)" }}
-        >
-          <LegendSwatch className="booth-available" label="Available" />
-          <LegendSwatch className="booth-corporate" label="Corporate" />
-          <LegendSwatch className="booth-held" label="Held" />
-          <LegendSwatch className="booth-booked" label="Booked" />
-        </div>
-      </div>
+    <div className="flex flex-col gap-5">
+      <h2
+        className="text-lg font-semibold"
+        style={{ color: "var(--brand-primary)" }}
+      >
+        {locationName}
+      </h2>
 
       {locationSlug === "arena" ? (
         <ArenaFloorPlan {...layoutProps} />
@@ -421,6 +425,16 @@ export default function BoothMap({
         <GenericFloorPlan {...layoutProps} />
       )}
 
+      <div
+        className="flex flex-wrap justify-center gap-4 text-xs"
+        style={{ color: "var(--brand-muted)" }}
+      >
+        <LegendSwatch className="booth-available" label="Available" />
+        <LegendSwatch className="booth-corporate" label="Corporate" />
+        <LegendSwatch className="booth-held" label="Held" />
+        <LegendSwatch className="booth-booked" label="Booked" />
+      </div>
+
       {selected && selected.status === "AVAILABLE" ? (
         <BoothBookingForm
           key={selected.id}
@@ -428,7 +442,10 @@ export default function BoothMap({
           onDone={() => setSelected(null)}
         />
       ) : (
-        <div className="text-sm" style={{ color: "var(--brand-muted)" }}>
+        <div
+          className="text-center text-sm"
+          style={{ color: "var(--brand-muted)" }}
+        >
           Click an available booth to reserve it.
         </div>
       )}

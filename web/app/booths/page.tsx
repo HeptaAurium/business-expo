@@ -6,12 +6,26 @@ export const metadata = {
   title: "Book a Booth — St. Joseph Mukasa Business Expo 2026",
 };
 
+// Display order for the expo floor plans — not alphabetical, since we want
+// Premium Ground shown above Arena. Any location whose slug isn't listed
+// here (e.g. a future one, before its layout is confirmed) is appended
+// after these, in whatever order Prisma returns it.
+const LOCATION_ORDER = ["premium", "arena"];
+
 export default async function BoothsPage() {
   await releaseExpiredHolds();
 
   const locations = await prisma.location.findMany({
     include: { booths: true },
-    orderBy: { name: "asc" },
+  });
+
+  locations.sort((a, b) => {
+    const aIndex = LOCATION_ORDER.indexOf(a.slug);
+    const bIndex = LOCATION_ORDER.indexOf(b.slug);
+    return (
+      (aIndex === -1 ? LOCATION_ORDER.length : aIndex) -
+      (bIndex === -1 ? LOCATION_ORDER.length : bIndex)
+    );
   });
 
   return (
