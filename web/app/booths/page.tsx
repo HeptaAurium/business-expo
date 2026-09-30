@@ -6,6 +6,13 @@ export const metadata = {
   title: "Book a Booth — St. Joseph Mukasa Business Expo 2026",
 };
 
+// Booth availability changes constantly (holds expire, organizers
+// confirm/release bookings) and this page also writes on every load via
+// releaseExpiredHolds() — it must never be statically pre-rendered at build
+// time, both because a build-time DB connection isn't available on Vercel
+// and because a static snapshot would show stale availability in production.
+export const dynamic = "force-dynamic";
+
 // Display order for the expo floor plans — not alphabetical, since we want
 // Premium Ground shown above Arena. Any location whose slug isn't listed
 // here (e.g. a future one, before its layout is confirmed) is appended

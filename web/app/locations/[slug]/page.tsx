@@ -3,6 +3,10 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import BoothMap from "@/components/BoothMap";
 
+// Booth availability changes constantly, so this can't be a build-time
+// static page — same reasoning as app/booths/page.tsx.
+export const dynamic = "force-dynamic";
+
 export default async function LocationPage({
   params,
 }: {

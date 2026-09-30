@@ -9,6 +9,11 @@ export const metadata = {
   title: "Organizer Admin — St. Joseph Mukasa Business Expo 2026",
 };
 
+// Reads the admin session cookie and live booth data — never pre-render
+// this at build time. (Reading cookies() already forces this implicitly,
+// but making it explicit avoids relying on that.)
+export const dynamic = "force-dynamic";
+
 export default async function AdminPage() {
   const authed = await isAdminAuthenticated();
 
