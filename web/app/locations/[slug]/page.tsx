@@ -29,7 +29,11 @@ export default async function LocationPage({
         ← All locations
       </Link>
       <div className="mt-4">
-        <BoothMap locationName={location.name} booths={location.booths} />
+        <BoothMap
+          locationName={location.name}
+          locationSlug={location.slug}
+          booths={location.booths}
+        />
       </div>
     </main>
   );
