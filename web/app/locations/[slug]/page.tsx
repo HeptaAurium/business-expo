@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { releaseExpiredHolds } from "@/lib/booths";
 import BoothMap from "@/components/BoothMap";
 
 // Booth availability changes constantly, so this can't be a build-time
@@ -14,9 +15,23 @@ export default async function LocationPage({
 }) {
   const { slug } = await params;
 
+  await releaseExpiredHolds();
+
   const location = await prisma.location.findUnique({
     where: { slug },
-    include: { booths: true },
+    include: {
+      // Only what the map needs — never send holder details to the browser.
+      booths: {
+        select: {
+          id: true,
+          code: true,
+          type: true,
+          status: true,
+          position: true,
+        },
+        orderBy: { position: "asc" },
+      },
+    },
   });
 
   if (!location) {
@@ -30,14 +45,10 @@ export default async function LocationPage({
         className="text-sm"
         style={{ color: "var(--brand-muted)" }}
       >
-        ← All locations
+        ← Back
       </Link>
       <div className="mt-4">
-        <BoothMap
-          locationName={location.name}
-          locationSlug={location.slug}
-          booths={location.booths}
-        />
+        <BoothMap locationName={location.name} booths={location.booths} />
       </div>
     </main>
   );
