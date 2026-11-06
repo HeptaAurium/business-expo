@@ -4,60 +4,37 @@ import { PrismaClient, BoothType } from "@/generated/prisma/client";
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
+// 20 + 10 + 10 + 10 + 10 + 3 — matches SECTIONS in BoothMap.tsx
+const BOOTH_COUNT = 63;
+
 async function main() {
-  const arena = await prisma.location.upsert({
-    where: { slug: "arena" },
-    update: {},
-    create: { slug: "arena", name: "Arena" },
+  // Retire the old two-area setup (booths cascade-delete with their location).
+  await prisma.location.deleteMany({
+    where: { slug: { in: ["arena", "premium"] } },
   });
 
-  const premium = await prisma.location.upsert({
-    where: { slug: "premium" },
-    update: {},
-    create: { slug: "premium", name: "Premium Ground" },
+  const parking = await prisma.location.upsert({
+    where: { slug: "parking" },
+    update: { name: "Parking Area" },
+    create: { slug: "parking", name: "Parking Area" },
   });
 
-  // Arena: single column, B1–B8, standard booths.
-  // `code` is globally unique (not just per-location), so it's the upsert key.
-  for (let i = 1; i <= 8; i++) {
+  // All booths are ordinary. `code` is globally unique, so it's the upsert key;
+  // `position` drives placement on the map.
+  for (let i = 1; i <= BOOTH_COUNT; i++) {
     await prisma.booth.upsert({
       where: { code: `B${i}` },
-      update: {},
+      update: { position: i, locationId: parking.id },
       create: {
         code: `B${i}`,
         type: BoothType.STANDARD,
         position: i,
-        locationId: arena.id,
+        locationId: parking.id,
       },
     });
   }
 
-  // Premium: P1–P2 corporate booths, A1–A8 standard booths.
-  for (let i = 1; i <= 2; i++) {
-    await prisma.booth.upsert({
-      where: { code: `P${i}` },
-      update: {},
-      create: {
-        code: `P${i}`,
-        type: BoothType.CORPORATE,
-        position: i,
-        locationId: premium.id,
-      },
-    });
-  }
-
-  for (let i = 1; i <= 8; i++) {
-    await prisma.booth.upsert({
-      where: { code: `A${i}` },
-      update: {},
-      create: {
-        code: `A${i}`,
-        type: BoothType.STANDARD,
-        position: i + 2, // after P1, P2 in layout order
-        locationId: premium.id,
-      },
-    });
-  }
+  console.log(`Seeded "${parking.name}" with ${BOOTH_COUNT} booths.`);
 }
 
 main()

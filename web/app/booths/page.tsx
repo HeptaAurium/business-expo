@@ -6,33 +6,16 @@ export const metadata = {
   title: "Book a Booth — St. Joseph Mukasa Business Expo 2026",
 };
 
-// Booth availability changes constantly (holds expire, organizers
-// confirm/release bookings) and this page also writes on every load via
-// releaseExpiredHolds() — it must never be statically pre-rendered at build
-// time, both because a build-time DB connection isn't available on Vercel
-// and because a static snapshot would show stale availability in production.
+// Availability changes constantly and this page writes on every load via
+// releaseExpiredHolds() — never statically pre-render it.
 export const dynamic = "force-dynamic";
-
-// Display order for the expo floor plans — not alphabetical, since we want
-// Premium Ground shown above Arena. Any location whose slug isn't listed
-// here (e.g. a future one, before its layout is confirmed) is appended
-// after these, in whatever order Prisma returns it.
-const LOCATION_ORDER = ["premium", "arena"];
 
 export default async function BoothsPage() {
   await releaseExpiredHolds();
 
-  const locations = await prisma.location.findMany({
+  const location = await prisma.location.findUnique({
+    where: { slug: "parking" },
     include: { booths: true },
-  });
-
-  locations.sort((a, b) => {
-    const aIndex = LOCATION_ORDER.indexOf(a.slug);
-    const bIndex = LOCATION_ORDER.indexOf(b.slug);
-    return (
-      (aIndex === -1 ? LOCATION_ORDER.length : aIndex) -
-      (bIndex === -1 ? LOCATION_ORDER.length : bIndex)
-    );
   });
 
   return (
@@ -50,27 +33,13 @@ export default async function BoothsPage() {
         </p>
       </div>
 
-      {locations.length === 0 && (
+      {location ? (
+        <BoothMap locationName={location.name} booths={location.booths} />
+      ) : (
         <p className="text-sm" style={{ color: "var(--brand-muted)" }}>
-          No locations seeded yet — run <code>npm run db:seed</code>.
+          No booths seeded yet — run <code>npm run db:seed</code>.
         </p>
       )}
-
-      <div className="flex flex-col gap-12">
-        {locations.map((location) => (
-          <section
-            key={location.id}
-            id={location.slug}
-            className="scroll-mt-20"
-          >
-            <BoothMap
-              locationName={location.name}
-              locationSlug={location.slug}
-              booths={location.booths}
-            />
-          </section>
-        ))}
-      </div>
     </main>
   );
 }

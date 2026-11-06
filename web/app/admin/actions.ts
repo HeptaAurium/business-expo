@@ -2,12 +2,25 @@
 
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { setAdminSession, clearAdminSession } from "@/lib/admin-auth";
+import {
+  setAdminSession,
+  clearAdminSession,
+  isAdminAuthenticated,
+  safeEqual,
+} from "@/lib/admin-auth";
 
 export type LoginState = {
   status: "idle" | "error";
   message?: string;
 };
+
+// Server actions are public POST endpoints — the page-level login check
+// doesn't protect them, so every mutating action verifies the session itself.
+async function requireAdmin() {
+  if (!(await isAdminAuthenticated())) {
+    throw new Error("Unauthorized");
+  }
+}
 
 export async function login(
   _prevState: LoginState,
@@ -24,7 +37,7 @@ export async function login(
     };
   }
 
-  if (password !== expected) {
+  if (!safeEqual(password, expected)) {
     return { status: "error", message: "Incorrect password." };
   }
 
@@ -39,6 +52,7 @@ export async function logout() {
 }
 
 export async function confirmBooking(boothId: string) {
+  await requireAdmin();
   await prisma.booth.update({
     where: { id: boothId },
     data: { status: "BOOKED", heldUntil: null },
@@ -48,6 +62,7 @@ export async function confirmBooking(boothId: string) {
 }
 
 export async function releaseBooth(boothId: string) {
+  await requireAdmin();
   await prisma.booth.update({
     where: { id: boothId },
     data: {
