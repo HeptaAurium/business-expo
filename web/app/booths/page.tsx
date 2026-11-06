@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { releaseExpiredHolds } from "@/lib/booths";
 import BoothMap from "@/components/BoothMap";
+import Link from "next/link";
 
 export const metadata = {
   title: "Book a Booth — St. Joseph Mukasa Business Expo 2026",
@@ -20,6 +21,13 @@ export default async function BoothsPage() {
 
   return (
     <main className="mx-auto max-w-5xl px-6 py-10">
+      <Link
+        href="/booking-status"
+        className="mt-2 inline-block text-sm underline underline-offset-2"
+        style={{ color: "var(--brand-primary)" }}
+      >
+        Already booked? Track your booking
+      </Link>
       <div className="mb-8">
         <h1
           className="text-2xl font-bold sm:text-3xl"

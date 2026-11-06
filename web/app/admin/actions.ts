@@ -8,6 +8,10 @@ import {
   isAdminAuthenticated,
   safeEqual,
 } from "@/lib/admin-auth";
+import {
+  queueBoothConfirmedEmail,
+  queueBoothReleasedEmail,
+} from "@/lib/mailer";
 
 export type LoginState = {
   status: "idle" | "error";
@@ -53,16 +57,26 @@ export async function logout() {
 
 export async function confirmBooking(boothId: string) {
   await requireAdmin();
-  await prisma.booth.update({
+
+  const before = await prisma.booth.findUnique({ where: { id: boothId } });
+  const booth = await prisma.booth.update({
     where: { id: boothId },
     data: { status: "BOOKED", heldUntil: null },
   });
+
+  // Only email on a real transition, not on a repeated click.
+  if (before && before.status !== "BOOKED") queueBoothConfirmedEmail(booth);
+
   revalidatePath("/admin");
   revalidatePath("/booths");
 }
 
 export async function releaseBooth(boothId: string) {
   await requireAdmin();
+
+  // Read first: the holder's details are cleared by the update below.
+  const before = await prisma.booth.findUnique({ where: { id: boothId } });
+
   await prisma.booth.update({
     where: { id: boothId },
     data: {
@@ -70,9 +84,15 @@ export async function releaseBooth(boothId: string) {
       heldUntil: null,
       holderName: null,
       holderPhone: null,
+      holderEmail: null,
       holderBusiness: null,
     },
   });
+
+  if (before && before.status !== "AVAILABLE") {
+    queueBoothReleasedEmail(before, "released");
+  }
+
   revalidatePath("/admin");
   revalidatePath("/booths");
 }

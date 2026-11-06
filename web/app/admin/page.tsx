@@ -4,6 +4,7 @@ import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { logout } from "./actions";
 import LoginForm from "./LoginForm";
 import BoothRow from "./BoothRow";
+import AdminRefresh from "./AdminRefresh";
 
 export const metadata = {
   title: "Organizer Admin — St. Joseph Mukasa Business Expo 2026",
@@ -59,15 +60,18 @@ export default async function AdminPage() {
             booth back up.
           </p>
         </div>
-        <form action={logout}>
-          <button
-            type="submit"
-            className="text-sm underline underline-offset-2"
-            style={{ color: "var(--brand-muted)" }}
-          >
-            Log out
-          </button>
-        </form>
+        <div className="flex items-center gap-4">
+          <AdminRefresh />
+          <form action={logout}>
+            <button
+              type="submit"
+              className="text-sm underline underline-offset-2"
+              style={{ color: "var(--brand-muted)" }}
+            >
+              Log out
+            </button>
+          </form>
+        </div>
       </div>
 
       {pendingBooths.length === 0 ? (

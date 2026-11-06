@@ -39,9 +39,10 @@ model Booth {
   position   Int
 
   /// Whoever currently holds/booked this booth — cleared on release, kept on confirm.
-  holderName     String?
-  holderPhone    String?
-  holderBusiness String?
+   holderName     String?
+   holderPhone    String?
+   holderEmail    String?
+   holderBusiness String?
 
   location   Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
   locationId String

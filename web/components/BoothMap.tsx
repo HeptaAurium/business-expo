@@ -1,7 +1,14 @@
 "use client";
 
-import { useActionState, useRef, useState } from "react";
-import { requestBooth, type RequestBoothState } from "@/app/booths/actions";
+import {
+  useActionState,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { requestBooths, type RequestBoothState } from "@/app/booths/actions";
+import { PRICE_PER_BOOTH, formatKes } from "@/lib/pricing";
 
 type BoothStatus = "AVAILABLE" | "HELD" | "BOOKED";
 type BoothType = "STANDARD" | "CORPORATE";
@@ -13,6 +20,15 @@ export type MapBooth = {
   status: BoothStatus;
   position: number;
 };
+
+function SponsorNote() {
+  return (
+    <p className="text-xs" style={{ color: "var(--brand-muted)" }}>
+      For corporate and sponsor packages, please contact the planning committee
+      directly.
+    </p>
+  );
+}
 
 function boothClassName(
   type: BoothType,
@@ -101,6 +117,7 @@ function PlanBackground() {
   const fx = (x: number) => (FLIP_X ? PLAN_W - x : x);
   const fy = (y: number) => (FLIP_Y ? PLAN_H - y + 10 : y);
   const anchor = FLIP_X ? "end" : "start";
+
   const roadStyle = {
     fill: "none",
     stroke: "var(--brand-primary)",
@@ -183,11 +200,11 @@ const DEFAULT_ZOOM = 1.5;
 
 function FloorPlan({
   booths,
-  selectedId,
+  selectedIds,
   onSelect,
 }: {
   booths: MapBooth[];
-  selectedId: string | null;
+  selectedIds: string[];
   onSelect: (booth: MapBooth) => void;
 }) {
   const placed = placeBooths(booths);
@@ -281,7 +298,7 @@ function FloorPlan({
                 booth={booth}
                 x={x}
                 y={y}
-                isSelected={selectedId === booth.id}
+                isSelected={selectedIds.includes(booth.id)}
                 onSelect={onSelect}
               />
             ))}
@@ -295,30 +312,46 @@ function FloorPlan({
 const initialFormState: RequestBoothState = { status: "idle" };
 
 function BoothBookingForm({
-  booth,
+  booths,
+  onSuccess,
   onDone,
 }: {
-  booth: MapBooth;
+  booths: MapBooth[];
+  onSuccess: () => void;
   onDone: () => void;
 }) {
-  const boundAction = requestBooth.bind(null, booth.id);
+  const boundAction = requestBooths.bind(
+    null,
+    booths.map((b) => b.id),
+  );
   const [state, formAction, isPending] = useActionState(
     boundAction,
     initialFormState,
   );
 
+  useEffect(() => {
+    if (state.status === "success") onSuccess();
+  }, [state.status, onSuccess]);
+
   if (state.status === "success") {
+    const codes = state.boothCodes?.join(", ");
+    const plural = (state.boothCodes?.length ?? 0) > 1;
     return (
       <div
         className="rounded-md border p-4 text-sm"
         style={{ borderColor: "var(--booth-available-border)" }}
       >
         <p className="font-semibold" style={{ color: "var(--brand-primary)" }}>
-          Booth {state.boothCode} held for you
+          Booth{plural ? "s" : ""} {codes} held for you
+        </p>
+        <p className="mt-2 font-medium" style={{ color: "var(--brand-primary)" }}>
+          Tentative amount:{" "}
+          {formatKes((state.boothCodes?.length ?? 0) * PRICE_PER_BOOTH)}
         </p>
         <p className="mt-1" style={{ color: "var(--brand-muted)" }}>
-          It&apos;s held for the next 24 hours. Our team will call you to
-          confirm your package and payment.
+          {plural ? "They're" : "It's"} held for the next 24 hours. We&apos;ve
+          emailed you the details, and our team will call you to confirm your
+          package and payment.
         </p>
         <button
           type="button"
@@ -326,7 +359,7 @@ function BoothBookingForm({
           className="mt-3 text-sm underline underline-offset-2"
           style={{ color: "var(--brand-primary)" }}
         >
-          Choose another booth
+          Choose more booths
         </button>
       </div>
     );
@@ -336,6 +369,21 @@ function BoothBookingForm({
     borderColor: "color-mix(in srgb, var(--brand-primary) 25%, transparent)",
     color: "var(--foreground)",
   };
+
+  const fields = [
+    { label: "Full name", name: "name", type: "text" },
+    {
+      label: "Phone number (07… or 01…)",
+      name: "phone",
+      type: "tel",
+      inputMode: "numeric" as const,
+      pattern: "0[17][0-9]{8}",
+      maxLength: 10,
+      title: "10 digits, starting with 07 or 01 (e.g. 0712345678)",
+    },
+    { label: "Email address", name: "email", type: "email" },
+    { label: "Business name", name: "businessName", type: "text" },
+  ];
 
   return (
     <form
@@ -350,8 +398,31 @@ function BoothBookingForm({
         className="text-sm font-semibold"
         style={{ color: "var(--foreground)" }}
       >
-        Reserve booth {booth.code}
+        Reserve {booths.length > 1 ? "booths" : "booth"}{" "}
+        {booths.map((b) => b.code).join(", ")}
       </p>
+
+      <div
+        className="rounded-md px-3 py-2 text-sm"
+        style={{
+          backgroundColor:
+            "color-mix(in srgb, var(--brand-primary) 8%, transparent)",
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <span>
+            {booths.length} {booths.length > 1 ? "booths" : "booth"} ×{" "}
+            {formatKes(PRICE_PER_BOOTH)}
+          </span>
+          <span className="font-semibold" style={{ color: "var(--brand-primary)" }}>
+            {formatKes(booths.length * PRICE_PER_BOOTH)}
+          </span>
+        </div>
+        <p className="mt-1 text-xs" style={{ color: "var(--brand-muted)" }}>
+          Tentative amount — our team confirms the final package and payment.
+        </p>
+      </div>
+      <SponsorNote />
 
       {state.status === "error" && (
         <p className="text-sm" style={{ color: "var(--brand-corporate)" }}>
@@ -359,11 +430,7 @@ function BoothBookingForm({
         </p>
       )}
 
-      {[
-        { label: "Full name", name: "name", type: "text" },
-        { label: "Phone number", name: "phone", type: "tel" },
-        { label: "Business name", name: "businessName", type: "text" },
-      ].map((f) => (
+      {fields.map((f) => (
         <label
           key={f.name}
           className="flex flex-col gap-1 text-xs font-medium"
@@ -374,6 +441,10 @@ function BoothBookingForm({
             name={f.name}
             type={f.type}
             required
+            inputMode={f.inputMode}
+            pattern={f.pattern}
+            maxLength={f.maxLength}
+            title={f.title}
             className="rounded border px-3 py-2 text-sm font-normal"
             style={inputStyle}
           />
@@ -387,7 +458,11 @@ function BoothBookingForm({
           className="rounded-md px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
           style={{ backgroundColor: "var(--brand-primary)" }}
         >
-          {isPending ? "Holding…" : "Hold This Booth"}
+          {isPending
+            ? "Holding…"
+            : booths.length > 1
+              ? `Hold These ${booths.length} Booths`
+              : "Hold This Booth"}
         </button>
         <button
           type="button"
@@ -412,7 +487,26 @@ export default function BoothMap({
   locationName: string;
   booths: MapBooth[];
 }) {
-  const [selected, setSelected] = useState<MapBooth | null>(null);
+  const [selected, setSelected] = useState<MapBooth[]>([]);
+  const [locked, setLocked] = useState(false); // true once a hold succeeded
+  const [formKey, setFormKey] = useState(0);
+
+  const toggle = (booth: MapBooth) => {
+    if (locked) return;
+    setSelected((prev) =>
+      prev.some((b) => b.id === booth.id)
+        ? prev.filter((b) => b.id !== booth.id)
+        : [...prev, booth],
+    );
+  };
+
+  const reset = () => {
+    setSelected([]);
+    setLocked(false);
+    setFormKey((k) => k + 1);
+  };
+
+  const handleSuccess = useCallback(() => setLocked(true), []);
 
   return (
     <div className="flex flex-col gap-5">
@@ -425,8 +519,8 @@ export default function BoothMap({
 
       <FloorPlan
         booths={booths}
-        selectedId={selected?.id ?? null}
-        onSelect={setSelected}
+        selectedIds={selected.map((b) => b.id)}
+        onSelect={toggle}
       />
 
       <div
@@ -434,23 +528,27 @@ export default function BoothMap({
         style={{ color: "var(--brand-muted)" }}
       >
         <LegendSwatch className="booth-available" label="Available" />
-        <LegendSwatch className="booth-corporate" label="Corporate" />
         <LegendSwatch className="booth-held" label="Held" />
         <LegendSwatch className="booth-booked" label="Booked" />
       </div>
 
-      {selected && selected.status === "AVAILABLE" ? (
+      {selected.length > 0 ? (
         <BoothBookingForm
-          key={selected.id}
-          booth={selected}
-          onDone={() => setSelected(null)}
+          key={formKey}
+          booths={selected}
+          onSuccess={handleSuccess}
+          onDone={reset}
         />
       ) : (
         <div
-          className="text-center text-sm"
+          className="flex flex-col items-center gap-1 text-center text-sm"
           style={{ color: "var(--brand-muted)" }}
         >
-          Click an available booth to reserve it.
+          <span>
+            Click one or more available booths to reserve them —{" "}
+            {formatKes(PRICE_PER_BOOTH)} per booth.
+          </span>
+          <SponsorNote />
         </div>
       )}
     </div>
